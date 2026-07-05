@@ -108,8 +108,41 @@ class Publisher:
             if existing:
                 await self._upload_content_images(existing, client)
 
+            # 4.5 上传章节标题图片(若模板配置了)
+            chapter_title_urls: list[str] = []
+            if template.chapter_title_images:
+                img_paths = self.template_manager.list_chapter_title_images(
+                    template_name, template.chapter_title_images
+                )
+                for img_path in img_paths:
+                    if not img_path.exists():
+                        continue
+                    try:
+                        url = await client.material.upload_content_image(img_path)
+                        chapter_title_urls.append(url)
+                    except RuntimeError:
+                        # 单张失败跳过,继续上传下一张
+                        continue
+
+            # 4.6 上传章节标题装饰小图标(若模板配置了,且未用整图模式)
+            chapter_icon_url = ""
+            if not chapter_title_urls and template.chapter_icon:
+                icon_path = self.template_manager.get_template_asset(
+                    template_name, template.chapter_icon
+                )
+                if icon_path and icon_path.exists():
+                    try:
+                        chapter_icon_url = await client.material.upload_content_image(icon_path)
+                    except RuntimeError:
+                        # 图标上传失败不中断,使用无图标标题
+                        chapter_icon_url = ""
+
             # 5. 渲染最终 HTML(图片用微信 URL)
-            html = self.renderer.render_for_publish(article, template, css=css)
+            html = self.renderer.render_for_publish(
+                article, template, css=css,
+                chapter_icon_url=chapter_icon_url,
+                chapter_title_urls=chapter_title_urls,
+            )
 
             # 6. 上传封面图
             thumb_media_id = ""

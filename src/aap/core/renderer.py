@@ -9,10 +9,12 @@
    - 模式 placeholder: 用占位符 {{IMG_01}} 替换本地 src
    - 模式 url:        用 ImageRef.wechat_url 替换(已上传)
    - 模式 keep:       保留原 src(用于本地预览)
-4. 用 <section> 包裹,注入根样式(typography/spacing)
+4. 章节标题装饰:若设置了 chapter_icon_url,将 H1 替换为图片+文字的居中结构
+5. 用 <section> 包裹,注入根样式(typography/spacing)
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from aap.core.html_utils import (
@@ -41,6 +43,8 @@ class HTMLRenderer:
         template: TemplateConfig,
         css: Optional[str] = None,
         image_mode: str = MODE_PLACEHOLDER,
+        chapter_icon_url: str = "",
+        chapter_title_urls: Optional[list[str]] = None,
     ) -> str:
         """渲染文章为带内联样式的 HTML
 
@@ -49,6 +53,9 @@ class HTMLRenderer:
             template: 模板配置
             css: 模板 CSS 文本(若为 None,则根据 template 配置生成默认 CSS)
             image_mode: 图片 src 替换模式
+            chapter_icon_url: 章节标题装饰小图标 URL(所有章节共用,旧模式)
+            chapter_title_urls: 章节标题整图 URL 列表(按 H1 出现顺序匹配,新模式)
+                优先级高于 chapter_icon_url
 
         Returns:
             微信编辑器可粘贴的 HTML 字符串
@@ -66,7 +73,23 @@ class HTMLRenderer:
         # 4. 内联 CSS
         html = inline_css(html, css)
 
-        # 5. 用 section 包裹,注入根样式
+        # 5. 章节标题装饰
+        #    优先级: 整图模式 > 单图标模式 > 不装饰
+        if chapter_title_urls:
+            html = self._replace_chapter_titles_with_images(
+                html, chapter_title_urls, template
+            )
+        elif chapter_icon_url:
+            html = self._decorate_chapter_titles(html, chapter_icon_url, template)
+
+        # 5.5 将 H2-H6 转换为 <p> 标签(保留内联样式)
+        #     微信编辑器对 h1-h6 有内置默认 font-size,粘贴时会覆盖我们的内联样式
+        #     导致"一、二、三""1、2、3"等子标题显示为 16px 而非 15px
+        #     这些子标题本质就是正文,改用 <p> 标签可完全规避字号问题
+        #     注意:H1 不转换(已被章节标题装饰逻辑处理)
+        html = self._convert_subheadings_to_paragraphs(html)
+
+        # 6. 用 section 包裹,注入根样式
         root_style = self._build_root_style(template)
         html = wrap_section(html, root_style)
 
@@ -77,27 +100,141 @@ class HTMLRenderer:
         article: Article,
         template: TemplateConfig,
         css: Optional[str] = None,
+        chapter_icon_url: str = "",
+        chapter_title_urls: Optional[list[str]] = None,
     ) -> str:
         """渲染用于本地预览的 HTML(保留原图片 src,可访问本地图片)"""
-        return self.render(article, template, css=css, image_mode=self.MODE_KEEP)
+        return self.render(
+            article, template, css=css,
+            image_mode=self.MODE_KEEP,
+            chapter_icon_url=chapter_icon_url,
+            chapter_title_urls=chapter_title_urls,
+        )
 
     def render_for_export(
         self,
         article: Article,
         template: TemplateConfig,
         css: Optional[str] = None,
+        chapter_icon_url: str = "",
+        chapter_title_urls: Optional[list[str]] = None,
     ) -> str:
         """渲染用于手动导出/复制的 HTML(图片用占位符,便于人工替换)"""
-        return self.render(article, template, css=css, image_mode=self.MODE_PLACEHOLDER)
+        return self.render(
+            article, template, css=css,
+            image_mode=self.MODE_PLACEHOLDER,
+            chapter_icon_url=chapter_icon_url,
+            chapter_title_urls=chapter_title_urls,
+        )
 
     def render_for_publish(
         self,
         article: Article,
         template: TemplateConfig,
         css: Optional[str] = None,
+        chapter_icon_url: str = "",
+        chapter_title_urls: Optional[list[str]] = None,
     ) -> str:
         """渲染用于 API 发布的 HTML(图片用微信 URL)"""
-        return self.render(article, template, css=css, image_mode=self.MODE_URL)
+        return self.render(
+            article, template, css=css,
+            image_mode=self.MODE_URL,
+            chapter_icon_url=chapter_icon_url,
+            chapter_title_urls=chapter_title_urls,
+        )
+
+    # ===== 章节标题装饰 =====
+
+    # 匹配 <h1>标题</h1>(含可能的属性)
+    _H1_PATTERN = re.compile(
+        r'<h1(?:\s[^>]*)?>(.*?)</h1>',
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    # 匹配 <hN attrs>content</hN>(N=2~6),用于将子标题转换为段落
+    _SUBHEADING_PATTERN = re.compile(
+        r'<(h[2-6])((?:\s[^>]*)?)>(.*?)</\1>',
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def _convert_subheadings_to_paragraphs(self, html: str) -> str:
+        """将 h2-h6 子标题标签转换为 <p> 标签(保留内联样式)
+
+        微信编辑器对 h1-h6 有内置默认 font-size,粘贴时会覆盖我们的内联样式,
+        导致"一、二、三""1、2、3"等子标题显示为 16px 而非 15px。
+        这些子标题本质就是正文段落,改用 <p> 标签可完全规避字号问题。
+
+        注意:
+        - 此方法在 inline_css 之后执行,此时 h* 标签已带内联样式,转换后样式完整保留
+        - H1 不转换(已被章节标题装饰逻辑处理为图片+文字结构)
+        """
+        def _replace(match: re.Match) -> str:
+            attrs = match.group(2) or ""
+            content = match.group(3)
+            return f'<p{attrs}>{content}</p>'
+
+        return self._SUBHEADING_PATTERN.sub(_replace, html)
+
+    def _replace_chapter_titles_with_images(
+        self, html: str, image_urls: list[str], template: TemplateConfig
+    ) -> str:
+        """将 H1 按出现顺序替换为整图+文字标题(第 N 个 H1 用第 N 张图)
+
+        替换后结构(图片在上,文字标题在下,均居中):
+        <section style="text-align: center; margin: 24px 0;">
+          <img src="URL" style="max-width: 100%; width: 100%; height: auto; border: none; display: block; margin: 0 auto;">
+          <span style="color: HEADING_COLOR; font-weight: bold; font-size: 16px; letter-spacing: 0.578px; display: block; margin-top: 8px;">标题文字</span>
+        </section>
+        """
+        heading_color = template.typography.heading_color or "rgb(40, 77, 142)"
+        counter = [0]  # 用列表包装,闭包内可修改
+
+        def _replace(match: re.Match) -> str:
+            idx = counter[0]
+            counter[0] += 1
+            if idx >= len(image_urls):
+                # 图片不够,保留原 H1
+                return match.group(0)
+            url = image_urls[idx]
+            title_text = match.group(1).strip()
+            return (
+                f'<section style="text-align: center; margin: 24px 0;">'
+                f'<img src="{url}" style="max-width: 100%; width: 100%; '
+                f'height: auto; border: none; display: block; margin: 0 auto;">'
+                f'<span style="color: {heading_color}; font-weight: bold; '
+                f'font-size: 16px; letter-spacing: 0.578px; display: block; '
+                f'margin-top: 8px;">{title_text}</span>'
+                f'</section>'
+            )
+
+        return self._H1_PATTERN.sub(_replace, html)
+
+    def _decorate_chapter_titles(
+        self, html: str, icon_url: str, template: TemplateConfig
+    ) -> str:
+        """将 H1 替换为图片+文字的居中 section(旧模式,单图标共用)
+
+        替换后结构:
+        <section style="text-align: center; margin: 24px 0;">
+          <img src="ICON" style="vertical-align: middle; width: 16px; height: 16px; margin-right: 8px;">
+          <span style="color: HEADING_COLOR; font-weight: bold; font-size: 16px; vertical-align: middle;">标题</span>
+        </section>
+        """
+        heading_color = template.typography.heading_color or "rgb(40, 77, 142)"
+
+        def _replace(match: re.Match) -> str:
+            title_text = match.group(1).strip()
+            return (
+                f'<section style="text-align: center; margin: 24px 0;">'
+                f'<img src="{icon_url}" style="vertical-align: middle; '
+                f'width: 16px; height: 16px; margin-right: 8px; border: none;">'
+                f'<span style="color: {heading_color}; font-weight: bold; '
+                f'font-size: 16px; vertical-align: middle; letter-spacing: 0.578px;">'
+                f'{title_text}</span>'
+                f'</section>'
+            )
+
+        return self._H1_PATTERN.sub(_replace, html)
 
     # ===== 内部方法 =====
 

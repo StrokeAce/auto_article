@@ -102,6 +102,10 @@ class TemplateConfig(BaseModel):
     image: ImageStyleConfig = Field(default_factory=ImageStyleConfig)
     table: TableConfig = Field(default_factory=TableConfig)
     code_block: CodeBlockConfig = Field(default_factory=CodeBlockConfig)
+    # 章节标题装饰小图标(单个文件名,放在模板目录下,所有章节共用)
+    chapter_icon: str = ""
+    # 章节标题整图目录(模板目录下的子目录,内含 1.png~N.png,按 H1 出现顺序匹配)
+    chapter_title_images: str = ""
 
 
 class PublishResult(BaseModel):

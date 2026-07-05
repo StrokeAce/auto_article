@@ -208,6 +208,12 @@ aap preview --port 8080 --mode wechat article.md
 
 # 不自动打开浏览器
 aap preview --no-browser article.md
+
+# 查看预览服务端口
+Get-NetTCPConnection -State Listen | Where-Object { (Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName -eq 'python' } | Select-Object LocalPort, OwningProcess
+
+ # 停止预览服务
+ Stop-Process -Id 7172
 ```
 
 预览模式：
@@ -439,7 +445,7 @@ aap scf ip
 # → 复制输出 IP 到微信公众平台白名单
 
 # 4. 测试发布
-aap publish tests/fixtures/sample.md
+aap publish tests/fixtures/minimal/sample.md
 ```
 
 ### 工作流 3：无 API 时的手动发布

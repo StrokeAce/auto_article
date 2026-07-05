@@ -94,7 +94,31 @@ class Exporter:
             template_name = "minimal"
 
         # 3. 渲染 HTML(图片用占位符)
-        html = self.renderer.render_for_export(article, template, css=css)
+        # 章节标题图片:导出时用占位符,用户需手动上传并替换
+        chapter_title_urls: list[str] = []
+        if template.chapter_title_images:
+            img_paths = self.template_manager.list_chapter_title_images(
+                template_name, template.chapter_title_images
+            )
+            for i in range(len(img_paths)):
+                # 用 {{CHAPTER_TITLE_01}} {{CHAPTER_TITLE_02}} ... 占位符
+                chapter_title_urls.append(
+                    f"{{{{CHAPTER_TITLE_{i + 1:02d}}}}}"
+                )
+
+        chapter_icon_url = ""
+        if not chapter_title_urls and template.chapter_icon:
+            icon_path = self.template_manager.get_template_asset(
+                template_name, template.chapter_icon
+            )
+            if icon_path and icon_path.exists():
+                chapter_icon_url = "{{CHAPTER_ICON}}"
+
+        html = self.renderer.render_for_export(
+            article, template, css=css,
+            chapter_icon_url=chapter_icon_url,
+            chapter_title_urls=chapter_title_urls,
+        )
 
         # 4. 准备输出目录
         if output_dir is None:

@@ -38,7 +38,7 @@ from aap.templates.manager import TemplateManager
 
 # 默认示例文章路径(项目内 fixtures)
 # server.py 位于 src/aap/templates/editor/,parents[4] 为项目根目录
-_DEFAULT_SAMPLE = Path(__file__).resolve().parents[4] / "tests" / "fixtures" / "sample.md"
+_DEFAULT_SAMPLE = Path(__file__).resolve().parents[4] / "tests" / "fixtures" / "minimal" / "sample.md"
 
 
 class EditorServer:

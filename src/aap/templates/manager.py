@@ -194,6 +194,52 @@ class TemplateManager:
         """
         return cli_override or article.meta.template or self.default_template
 
+    def get_template_asset(self, name: str, asset_filename: str) -> Optional[Path]:
+        """获取模板目录下的资源文件路径(如章节图标)
+
+        Args:
+            name: 模板名称
+            asset_filename: 资源文件名(如 chapter_icon.png)
+
+        Returns:
+            文件路径(若存在),否则 None
+        """
+        template_dir = self._find_template_dir(name)
+        if template_dir is None:
+            return None
+        asset_path = template_dir / asset_filename
+        return asset_path if asset_path.exists() else None
+
+    def list_chapter_title_images(self, name: str, sub_dir: str) -> list[Path]:
+        """列出章节标题整图目录下的所有图片,按文件名数字序排序
+
+        Args:
+            name: 模板名称
+            sub_dir: 模板目录下的子目录名(如 chapter_titles)
+
+        Returns:
+            图片文件路径列表(按 1.png, 2.png, ... 顺序),空列表表示无图片
+        """
+        template_dir = self._find_template_dir(name)
+        if template_dir is None:
+            return []
+        img_dir = template_dir / sub_dir
+        if not img_dir.exists() or not img_dir.is_dir():
+            return []
+        # 收集 .png/.jpg/.jpeg 文件,按文件名中的数字排序
+        import re as _re
+        files: list[tuple[int, Path]] = []
+        for f in img_dir.iterdir():
+            if not f.is_file():
+                continue
+            if f.suffix.lower() not in (".png", ".jpg", ".jpeg"):
+                continue
+            m = _re.search(r"(\d+)", f.stem)
+            order = int(m.group(1)) if m else 0
+            files.append((order, f))
+        files.sort(key=lambda x: x[0])
+        return [p for _, p in files]
+
     # ===== 内部工具 =====
 
     def _find_template_dir(self, name: str) -> Optional[Path]:
@@ -223,6 +269,8 @@ class TemplateManager:
                 image=ImageStyleConfig(**(data.get("image") or {})),
                 table=TableConfig(**(data.get("table") or {})),
                 code_block=CodeBlockConfig(**(data.get("code_block") or {})),
+                chapter_icon=str(data.get("chapter_icon", "")),
+                chapter_title_images=str(data.get("chapter_title_images", "")),
             )
         except (ValidationError, TypeError) as e:
             raise ValueError(f"模板配置格式错误: {e}") from e

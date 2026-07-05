@@ -1,0 +1,228 @@
+/* 财报分析模板样式
+ * 复刻自"财报破晓算法"公众号排版风格
+ * 特征:8章节固定结构 + 图片+文字章节标题 + 多级层次
+ *
+ * 章节结构:
+ *   H1 = 章节大标题(公司概况/经营分析/...) → 由 renderer 替换为 图片+文字 居中结构
+ *   H2 = 一级子标题(一、二、三)            → 左对齐 + 普通字重
+ *   H3 = 二级子标题(1、2、3)               → 普通段落样式
+ *   H4 = 三级子标题(■ 黑色小方块)          → 加粗 + 黑色小方块前缀
+ *   P  = 正文段落                          → 15px + 行高 2em + 段间距 24px
+ */
+
+/* 根容器:模拟微信编辑器正文区域 */
+section {
+  font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", "Hiragino Sans GB", "Microsoft YaHei UI",
+    "Microsoft YaHei", Arial, sans-serif;
+  font-size: 15px;
+  color: rgb(63, 63, 63);
+  line-height: 2em;
+  letter-spacing: 0.544px;
+  background-color: rgb(255, 255, 255);
+  padding: 0 8px;
+  text-align: justify;
+}
+
+/* ===== H1:章节大标题 ===== */
+/* 注意:若设置了 chapter_icon,renderer 会将 H1 替换为 图片+文字 的居中 section
+ * 此处样式仅在未设置图标时生效(兜底) */
+h1 {
+  text-align: center;
+  color: rgb(40, 77, 142);
+  font-weight: bold;
+  font-size: 16px;
+  letter-spacing: 0.578px;
+  line-height: normal;
+  margin: 24px 0;
+  padding: 0;
+}
+
+/* ===== H2:一级子标题(一、二、三) ===== */
+/* 对应原文的"一、业务结构分析""二、交付规模与产能"等 */
+h2 {
+  text-align: left;
+  color: rgb(63, 63, 63);
+  font-weight: normal;
+  font-size: 15px;
+  letter-spacing: 0.544px;
+  line-height: 2em;
+  margin: 24px 0 0 0;
+  padding: 0;
+}
+
+/* ===== H3:二级子标题(1、2、3) ===== */
+/* 对应原文的"1、AIDC业务爆发式增长"等,与正文段落样式一致 */
+h3 {
+  text-align: justify;
+  color: rgb(63, 63, 63);
+  font-weight: normal;
+  font-size: 15px;
+  letter-spacing: 0.544px;
+  line-height: 2em;
+  margin: 0 0 24px 0;
+  padding: 0;
+}
+
+/* ===== H4:三级子标题(■ 黑色小方块) ===== */
+/* 对应原文的黑色小方块序号,加粗显示 */
+h4 {
+  text-align: left;
+  color: rgb(63, 63, 63);
+  font-weight: bold;
+  font-size: 15px;
+  letter-spacing: 0.544px;
+  line-height: 2em;
+  margin: 16px 0 8px 0;
+  padding: 0;
+}
+
+h5, h6 {
+  text-align: left;
+  color: rgb(63, 63, 63);
+  font-weight: bold;
+  font-size: 15px;
+  letter-spacing: 0.544px;
+  line-height: 2em;
+  margin: 16px 0;
+  padding: 0;
+}
+
+/* ===== 正文段落 ===== */
+/* 注意:font-size 必须显式声明,微信编辑器对 <p> 有默认 16px,会覆盖继承值 */
+p {
+  text-align: justify;
+  font-size: 15px;
+  color: rgb(63, 63, 63);
+  letter-spacing: 0.544px;
+  line-height: 2em;
+  margin: 0 0 24px 0;
+  padding: 0;
+}
+
+/* ===== 链接:深蓝色 ===== */
+a {
+  color: rgb(40, 77, 142);
+  text-decoration: none;
+}
+
+/* ===== 图片:居中 + 578px 宽 ===== */
+img {
+  display: block;
+  margin: 0 auto;
+  max-width: 578px;
+  width: 578px;
+  height: auto !important;
+  border-radius: 0;
+}
+
+/* 图片说明/描述(若有) */
+figcaption {
+  text-align: center;
+  color: rgb(178, 178, 178);
+  font-size: 14px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+/* ===== 行内代码 ===== */
+code {
+  color: #c7254e;
+  background-color: #f9f2f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* ===== 代码块 ===== */
+pre {
+  background-color: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+pre code {
+  color: inherit;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 14px;
+}
+
+/* ===== 表格:字号 14px ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 0 0 24px 0;
+}
+
+th, td {
+  border: 1px solid #dddddd;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* ===== 引用块:灰色提示样式(温馨提示/免责声明) ===== */
+blockquote {
+  border-left: 4px solid rgb(40, 77, 142);
+  padding: 8px 16px;
+  color: rgb(178, 178, 178);
+  font-size: 15px;
+  line-height: 2em;
+  margin: 0 0 24px 0;
+  background-color: rgb(250, 250, 250);
+}
+
+blockquote p {
+  font-size: 15px;
+  margin: 0;
+  color: rgb(178, 178, 178);
+}
+
+/* ===== 强调:加粗(原文中数字加粗效果) ===== */
+strong, b {
+  font-weight: bold;
+  color: inherit;
+}
+
+/* ===== 分隔线 ===== */
+hr {
+  border: none;
+  border-top: 1px solid #eeeeee;
+  margin: 24px 0;
+}
+
+/* ===== 列表 ===== */
+ul, ol {
+  padding-left: 24px;
+  margin: 0 0 24px 0;
+  font-size: 15px;
+  line-height: 2em;
+}
+
+li {
+  margin: 4px 0;
+  font-size: 15px;
+  text-align: justify;
+}
+
+/* ===== 行内强调 span(模拟原文的 textstyle span) ===== */
+span {
+  letter-spacing: inherit;
+}

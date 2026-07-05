@@ -1,0 +1,46 @@
+# 财报分析模板配置
+# 复刻自"财报破晓算法"公众号排版风格
+# 特征:8 章节固定结构 + 图片+文字章节标题 + 多级层次
+name: caibao
+description: 财报分析风格模板,8章节固定结构,蓝色菱形图标+文字标题,适合深度长文
+
+# 章节标题整图目录(模板目录下的子目录,内含 1.png~8.png,按 H1 出现顺序匹配)
+# 优先级高于 chapter_icon,启用后 H1 将被整图替换
+chapter_title_images: "chapter_titles"
+
+# 章节标题装饰小图标(备用,当 chapter_title_images 未配置或图片不足时使用)
+chapter_icon: "chapter_icon.png"
+
+typography:
+  font_family: '"PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif'
+  base_size: "15px"
+  base_color: "rgb(63, 63, 63)"
+  line_height: "2em"
+  heading_color: "rgb(40, 77, 142)"
+  link_color: "rgb(40, 77, 142)"
+  code_color: "#c7254e"
+
+spacing:
+  paragraph_margin: "24px"
+  first_line_indent: "0"
+  left_right_padding: "0px"
+  background_color: "rgb(255, 255, 255)"
+
+image:
+  max_width: "578px"
+  border_radius: "0px"
+  shadow: "none"
+  caption_color: "rgb(178, 178, 178)"
+  caption_size: "14px"
+
+table:
+  border_color: "#dddddd"
+  header_background: "#f2f2f2"
+  zebra_striped: true
+  zebra_color: "#fafafa"
+
+code_block:
+  theme: "default"
+  background: "#f6f8fa"
+  font_size: "14px"
+  line_numbers: false

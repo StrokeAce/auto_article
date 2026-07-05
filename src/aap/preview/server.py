@@ -125,6 +125,30 @@ class PreviewServer:
                 return HTMLResponse("Not Found", status_code=404)
             return FileResponse(target)
 
+        @app.get("/icon/{filename}")
+        async def serve_icon(filename: str):
+            """提供模板章节装饰图标访问(单图标模式)"""
+            article = self.parser.parse(self.md_path)
+            template_name = self.template_name or article.meta.template or "minimal"
+            icon_path = self.template_manager.get_template_asset(template_name, filename)
+            if icon_path and icon_path.exists():
+                return FileResponse(icon_path)
+            return HTMLResponse("Not Found", status_code=404)
+
+        @app.get("/icon/{sub_dir}/{idx}/{filename}")
+        async def serve_chapter_title_image(sub_dir: str, idx: str, filename: str):
+            """提供章节标题整图访问(整图模式)"""
+            article = self.parser.parse(self.md_path)
+            template_name = self.template_name or article.meta.template or "minimal"
+            img_paths = self.template_manager.list_chapter_title_images(
+                template_name, sub_dir
+            )
+            # 匹配文件名(忽略 idx,因为 list_chapter_title_images 已按序返回)
+            for p in img_paths:
+                if p.name == filename:
+                    return FileResponse(p)
+            return HTMLResponse("Not Found", status_code=404)
+
         @app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket) -> None:
             """WebSocket 热重载端点
@@ -171,9 +195,35 @@ class PreviewServer:
         except FileNotFoundError:
             template = self.template_manager.load_template("minimal")
             css = self.template_manager.load_template_css("minimal")
+            template_name = "minimal"
+
+        # 章节标题图片(本地预览)
+        # 优先级: 整图模式 > 单图标模式
+        chapter_title_urls: list[str] = []
+        if template.chapter_title_images:
+            img_paths = self.template_manager.list_chapter_title_images(
+                template_name, template.chapter_title_images
+            )
+            for i, img_path in enumerate(img_paths, start=1):
+                if img_path.exists():
+                    chapter_title_urls.append(
+                        f"/icon/{template.chapter_title_images}/{i}/{img_path.name}"
+                    )
+
+        chapter_icon_url = ""
+        if not chapter_title_urls and template.chapter_icon:
+            icon_path = self.template_manager.get_template_asset(
+                template_name, template.chapter_icon
+            )
+            if icon_path and icon_path.exists():
+                chapter_icon_url = f"/icon/{template.chapter_icon}"
 
         # 预览模式:保留原 src,但把相对路径转换为 /image/... 路由
-        html = self.renderer.render_preview(article, template, css=css)
+        html = self.renderer.render_preview(
+            article, template, css=css,
+            chapter_icon_url=chapter_icon_url,
+            chapter_title_urls=chapter_title_urls,
+        )
         html = self._rewrite_local_images(html, article)
         return html
 

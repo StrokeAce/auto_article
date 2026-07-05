@@ -3,12 +3,14 @@
 提供图片上传等素材管理能力。
 
 接口:
-- POST /cgi-bin/material/add_material  上传永久素材(返回 media_id + url)
-- POST /cgi-bin/media/uploadimg        上传图文消息内图片(仅返回 url)
+- POST /cgi-bin/material/add_material        上传永久素材(返回 media_id + url)
+- POST /cgi-bin/media/uploadimg              上传图文消息内图片(仅返回 url)
+- POST /cgi-bin/material/batchget_material   批量获取素材列表(返回 media_id + name + url)
 
 注意:
 - 正文图片用 uploadimg(只返回 url,可用于 content 中的 img src)
 - 封面图用 add_material(返回 media_id,用于 thumb_media_id)
+- 拉取素材库已有图片 URL 用 batchget_material(按 name 匹配本地文件)
 """
 from __future__ import annotations
 
