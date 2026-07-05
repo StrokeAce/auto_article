@@ -1,0 +1,38 @@
+# AAP 配置示例文件
+# 复制到 .aap/config.yaml 后修改为真实值
+
+# 微信公众号账号配置
+account:
+  app_id: "your-app-id"
+  app_secret: "your-app-secret"
+  nickname: "我的公众号"
+
+# 腾讯云 SCF 代理配置(用于绕开 IP 白名单)
+scf:
+  url: ""
+  secret: ""
+  enabled: false
+
+# 默认模板
+default_template: "minimal"
+
+# 预览配置
+preview:
+  port: 8000
+  default_mode: "wechat"
+  open_browser: true
+
+# 发布配置
+publish:
+  output_dir: ".aap/output"
+  auto_clipboard: true
+
+# 模板编辑器配置
+editor:
+  port: 7000
+  sample_article: ""
+
+# 历史记录配置
+history:
+  enabled: true
+  file: ".aap/history.jsonl"

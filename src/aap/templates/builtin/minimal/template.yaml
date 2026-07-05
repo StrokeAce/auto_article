@@ -1,0 +1,37 @@
+# 最小模板配置
+name: minimal
+description: 极简风格模板,微信兼容
+
+typography:
+  font_family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+  base_size: "16px"
+  base_color: "#333333"
+  line_height: "1.75"
+  heading_color: "#1a1a1a"
+  link_color: "#576b95"
+  code_color: "#c7254e"
+
+spacing:
+  paragraph_margin: "16px"
+  first_line_indent: "0"
+  left_right_padding: "16px"
+  background_color: "#ffffff"
+
+image:
+  max_width: "100%"
+  border_radius: "4px"
+  shadow: "none"
+  caption_color: "#888888"
+  caption_size: "14px"
+
+table:
+  border_color: "#dddddd"
+  header_background: "#f2f2f2"
+  zebra_striped: true
+  zebra_color: "#fafafa"
+
+code_block:
+  theme: "default"
+  background: "#f6f8fa"
+  font_size: "14px"
+  line_numbers: false
