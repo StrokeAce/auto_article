@@ -151,22 +151,23 @@ class HTMLRenderer:
         re.IGNORECASE | re.DOTALL,
     )
 
-    # 匹配 <hN attrs>content</hN>(N=2~6),用于将子标题转换为段落
+    # 匹配 <hN attrs>content</hN>(N=1~6),用于将标题转换为段落
+    # H1-H6 都转换:微信编辑器对 h* 标签有内置默认 font-size,会覆盖内联样式
     _SUBHEADING_PATTERN = re.compile(
-        r'<(h[2-6])((?:\s[^>]*)?)>(.*?)</\1>',
+        r'<(h[1-6])((?:\s[^>]*)?)>(.*?)</\1>',
         re.IGNORECASE | re.DOTALL,
     )
 
     def _convert_subheadings_to_paragraphs(self, html: str) -> str:
-        """将 h2-h6 子标题标签转换为 <p> 标签(保留内联样式)
+        """将 h1-h6 标题标签转换为 <p> 标签(保留内联样式)
 
         微信编辑器对 h1-h6 有内置默认 font-size,粘贴时会覆盖我们的内联样式,
-        导致"一、二、三""1、2、3"等子标题显示为 16px 而非 15px。
-        这些子标题本质就是正文段落,改用 <p> 标签可完全规避字号问题。
+        导致章节标题("公司概况"等)和子标题("一、二、三""1、2、3")显示为错误字号。
+        改用 <p> 标签可完全规避字号问题,内联样式完整保留。
 
         注意:
         - 此方法在 inline_css 之后执行,此时 h* 标签已带内联样式,转换后样式完整保留
-        - H1 不转换(已被章节标题装饰逻辑处理为图片+文字结构)
+        - 当启用整图/图标装饰时,H1 已被替换为 <section> 结构,正则匹配不到,不受影响
         """
         def _replace(match: re.Match) -> str:
             attrs = match.group(2) or ""
