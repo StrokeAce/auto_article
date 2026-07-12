@@ -1,0 +1,43 @@
+# 研究报告模板配置
+# 复刻自专业研究报告风格(参考checkpoint-analysis)
+# 特征:深蓝封面 + CHAPTER编号章节 + 引导段落 + callout提示框 + 专业表格 + 参考文献
+name: research
+description: 专业研究报告风格,深蓝色调,章节带CHAPTER编号,适合行业研究/投资分析/咨询报告
+
+# 章节标题:纯文字模式
+chapter_title_images: ""
+chapter_icon: ""
+
+typography:
+  font_family: '"WorkSans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+  base_size: "16px"
+  base_color: "#1c1c28"
+  line_height: "1.8"
+  heading_color: "#1a3a5c"
+  link_color: "#1a3a5c"
+  code_color: "#c7254e"
+
+spacing:
+  paragraph_margin: "1.1rem"
+  first_line_indent: "0"
+  left_right_padding: "0px"
+  background_color: "#fdfcfa"
+
+image:
+  max_width: "100%"
+  border_radius: "6px"
+  shadow: "none"
+  caption_color: "#6b7280"
+  caption_size: "0.85rem"
+
+table:
+  border_color: "#e2ddd4"
+  header_background: "#1a3a5c"
+  zebra_striped: true
+  zebra_color: "#f4f1ec"
+
+code_block:
+  theme: "default"
+  background: "#f4f1ec"
+  font_size: "0.88rem"
+  line_numbers: false

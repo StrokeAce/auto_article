@@ -66,7 +66,19 @@ def inline_css(html: str, css: str) -> str:
     soup = BeautifulSoup(html, "lxml")
 
     for selector, declarations in rules:
-        # 跳过复杂选择器(包含伪类/伪元素/@规则)
+        # 处理 ::before 伪元素(如 CHAPTER 编号)
+        if "::before" in selector:
+            _apply_before_pseudo(soup, selector, declarations)
+            continue
+        # 处理 ::after 伪元素
+        if "::after" in selector:
+            _apply_after_pseudo(soup, selector, declarations)
+            continue
+        # 处理 :nth-child(even) 伪类(如 zebra 条纹)
+        if ":nth-child(even)" in selector:
+            _apply_nth_child_even(soup, selector, declarations)
+            continue
+        # 跳过其他复杂选择器(包含伪类/伪元素/@规则)
         if ":" in selector or "::" in selector or selector.startswith("@"):
             continue
         try:
@@ -209,6 +221,150 @@ def _parse_css_rules(css: str) -> list[tuple[str, list[tuple[str, str]]]]:
         if selector and decls:
             rules.append((selector, decls))
     return rules
+
+
+def _apply_before_pseudo(
+    soup: BeautifulSoup, selector: str, declarations: list[tuple[str, str]]
+) -> None:
+    """处理 ::before 伪元素
+
+    支持 content 属性中的 counter() 函数(用于自动编号,如 CHAPTER 01)。
+    在匹配元素前插入 <span> 模拟伪元素效果。
+
+    如: h1::before { content: "CHAPTER " counter(chapter, decimal-leading-zero); color: #a67c00; }
+    → 在每个 h1 前插入 <span style="color: #a67c00">CHAPTER 01</span>
+    """
+    base = selector.replace("::before", "").strip()
+    if not base:
+        return
+
+    # 分离 content 和其他声明
+    content_value = ""
+    other_decls: list[tuple[str, str]] = []
+    for prop, value in declarations:
+        if prop == "content":
+            content_value = value
+        else:
+            other_decls.append((prop, value))
+
+    if not content_value:
+        return
+
+    try:
+        elements = soup.select(base)
+    except Exception:
+        return
+
+    # 构建 span 的 style
+    span_style_parts = ["display: block"]
+    for prop, value in other_decls:
+        span_style_parts.append(f"{prop}: {value}")
+    span_style = "; ".join(span_style_parts)
+
+    for i, el in enumerate(elements, start=1):
+        # 处理 counter() 函数
+        text = content_value
+        counter_match = re.search(
+            r"counter\(\s*([\w-]+)\s*(?:,\s*([\w-]+)\s*)?\)", text
+        )
+        if counter_match:
+            fmt = counter_match.group(2) or "decimal"
+            if fmt == "decimal-leading-zero":
+                num = f"{i:02d}"
+            else:
+                num = str(i)
+            text = re.sub(r"counter\([^)]+\)", num, text)
+        # 去掉所有引号,压缩多余空格
+        text = text.replace('"', '').replace("'", "")
+        text = re.sub(r"\s+", " ", text).strip()
+
+        span = soup.new_tag("span")
+        span["style"] = span_style
+        span.string = text
+        el.insert_before(span)
+
+
+def _apply_after_pseudo(
+    soup: BeautifulSoup, selector: str, declarations: list[tuple[str, str]]
+) -> None:
+    """处理 ::after 伪元素(在匹配元素后插入 <span>)"""
+    base = selector.replace("::after", "").strip()
+    if not base:
+        return
+
+    content_value = ""
+    other_decls: list[tuple[str, str]] = []
+    for prop, value in declarations:
+        if prop == "content":
+            content_value = value
+        else:
+            other_decls.append((prop, value))
+
+    if not content_value:
+        return
+
+    try:
+        elements = soup.select(base)
+    except Exception:
+        return
+
+    span_style_parts = []
+    for prop, value in other_decls:
+        span_style_parts.append(f"{prop}: {value}")
+    span_style = "; ".join(span_style_parts)
+
+    text = content_value.strip("\"'")
+    for el in elements:
+        span = soup.new_tag("span")
+        if span_style:
+            span["style"] = span_style
+        span.string = text
+        el.insert_after(span)
+
+
+def _apply_nth_child_even(
+    soup: BeautifulSoup, selector: str, declarations: list[tuple[str, str]]
+) -> None:
+    """处理 :nth-child(even) 伪类(如 zebra 条纹)
+
+    支持两种形式:
+    - "tr:nth-child(even)"           → 给偶数位 tr 加内联 style
+    - "tr:nth-child(even) td"        → 给偶数位 tr 下的 td 加内联 style
+    """
+    # 分离基础选择器和后代选择器
+    parts = selector.split()
+    base_part = parts[0]
+    descendant = " ".join(parts[1:]) if len(parts) > 1 else None
+
+    base_tag = base_part.replace(":nth-child(even)", "").strip()
+    if not base_tag:
+        return
+
+    try:
+        elements = soup.select(base_tag)
+    except Exception:
+        return
+
+    for i, el in enumerate(elements):
+        if (i + 1) % 2 != 0:
+            continue  # 只处理偶数位(1-indexed)
+        if descendant:
+            # 给后代元素加 style
+            try:
+                children = el.select(descendant)
+            except Exception:
+                continue
+            for child in children:
+                existing = child.get("style", "")
+                merged = _merge_styles(existing, declarations)
+                if merged:
+                    child["style"] = merged
+        else:
+            # 给元素本身加 style
+            existing = el.get("style", "")
+            merged = _merge_styles(existing, declarations)
+            if merged:
+                el["style"] = merged
 
 
 def _merge_styles(existing: str, declarations: list[tuple[str, str]]) -> str:

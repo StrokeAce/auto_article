@@ -1,0 +1,272 @@
+/* 研究报告模板样式
+ * 复刻自专业研究报告风格(参考checkpoint-analysis)
+ * 特征:深蓝色调 + CHAPTER自动编号 + 引导段落 + callout提示框 + 专业表格 + verdict标签
+ *
+ * Markdown 元素映射:
+ *   H1 = 章节标题(带CHAPTER自动编号)     → CSS counter自动加"CHAPTER 01"前缀
+ *   H2 = 副标题(1.1/1.2)                 → 深蓝色 + 中等字号
+ *   H3 = 小标题                           → 深墨色 + 加粗
+ *   H4 = 更小标题                         → 深墨色 + 加粗 + 小字号
+ *   P  = 正文段落                         → 16px + 行高1.8 + 段间距
+ *   blockquote = callout提示框            → 浅灰底 + 左侧金色边框
+ *   table = 专业表格                      → 深蓝表头 + zebra条纹
+ *   td code = verdict标签                 → 表格内的行内代码显示为彩色标签
+ *   strong/b = 加粗强调                   → 深墨色加粗
+ *   hr = 分隔线                           → 浅灰色细线
+ */
+
+/* ===== 根容器 ===== */
+section {
+  font-family: "WorkSans", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+    system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: #1c1c28;
+  line-height: 1.8;
+  background-color: #fdfcfa;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  /* CHAPTER计数器,从0开始 */
+  counter-reset: chapter;
+}
+
+/* ===== H1:章节大标题(带CHAPTER自动编号) ===== */
+/* 使用CSS counter自动生成"CHAPTER 01"前缀 */
+h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1c1c28;
+  margin: 3.5rem 0 0.5rem 0;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid #e2ddd4;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-align: left;
+  /* 章节计数器递增 */
+  counter-increment: chapter;
+}
+
+/* H1前缀:CHAPTER 01 (金色等宽字体,小字号) */
+h1::before {
+  content: "CHAPTER " counter(chapter, decimal-leading-zero);
+  display: block;
+  font-family: "IBMPlexMono", "Consolas", "Monaco", monospace;
+  font-size: 0.9rem;
+  color: #a67c00;
+  font-weight: 400;
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.1em;
+}
+
+/* ===== H2:副标题(1.1/1.2 等级) ===== */
+h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #1a3a5c;
+  margin: 2rem 0 0.8rem 0;
+  padding: 0;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* ===== H3:小标题 ===== */
+h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1c28;
+  margin: 1.5rem 0 0.6rem 0;
+  padding: 0;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* ===== H4-H6:更小标题 ===== */
+h4, h5, h6 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1c1c28;
+  margin: 1.2rem 0 0.5rem 0;
+  padding: 0;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* ===== 正文段落 ===== */
+p {
+  font-size: 16px;
+  color: #1c1c28;
+  line-height: 1.8;
+  margin: 0 0 1.1rem 0;
+  padding: 0;
+  text-align: left;
+}
+
+/* ===== 链接:深蓝色 ===== */
+a {
+  color: #1a3a5c;
+  text-decoration: none;
+}
+
+/* ===== 图片:居中 + 圆角 ===== */
+img {
+  display: block;
+  margin: 1.5rem auto;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+/* 图片说明 */
+figcaption {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ===== 行内代码(正文中的code) ===== */
+code {
+  color: #c7254e;
+  background-color: #f4f1ec;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.88rem;
+  font-family: "IBMPlexMono", "Consolas", "Monaco", monospace;
+}
+
+/* ===== 表格内的行内代码:verdict标签风格 ===== */
+/* 在表格td内用 `真卡口-可投资` 会显示为带背景色+圆角的标签 */
+td code {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: "WorkSans", "Microsoft YaHei", sans-serif;
+  color: #1e7e34;
+  background-color: rgba(30, 126, 52, 0.12);
+  border: none;
+}
+
+/* ===== 代码块 ===== */
+pre {
+  background-color: #f4f1ec;
+  padding: 1rem 1.5rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem 0;
+}
+
+pre code {
+  color: inherit;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 0.88rem;
+  display: inline;
+  font-family: "IBMPlexMono", "Consolas", "Monaco", monospace;
+}
+
+/* ===== 表格:专业研究报告风格 ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.5rem 0;
+  border: 1px solid #e2ddd4;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #e2ddd4;
+  font-size: 0.88rem;
+}
+
+/* 表头:深蓝色背景 + 白色文字 */
+th {
+  background-color: #1a3a5c !important;
+  color: #fdfcfa !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-bottom: none;
+}
+
+/* zebra条纹:偶数行浅灰色底 */
+tr:nth-child(even) {
+  background-color: #f4f1ec !important;
+}
+
+tr:nth-child(even) td {
+  background-color: #f4f1ec !important;
+}
+
+/* 最后一行去掉边框 */
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== 引用块:callout提示框风格 ===== */
+/* 用于突出重要观点/风险提示/关键判断 */
+blockquote {
+  background-color: #f4f1ec !important;
+  border-left: 3px solid #a67c00;
+  border-radius: 0 6px 6px 0;
+  padding: 1.2rem 1.5rem;
+  margin: 1.5rem 0;
+  color: #1c1c28;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+blockquote p {
+  font-size: 0.95rem;
+  margin: 0 0 0.6rem 0;
+  color: #1c1c28;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+blockquote strong {
+  color: #1a3a5c;
+}
+
+/* ===== 强调:加粗 ===== */
+strong, b {
+  font-weight: 600;
+  color: #1c1c28;
+}
+
+/* ===== 分隔线 ===== */
+hr {
+  border: none;
+  border-top: 1px solid #e2ddd4;
+  margin: 3rem 0;
+  height: 1px;
+}
+
+/* ===== 列表 ===== */
+ul, ol {
+  padding-left: 1.5rem;
+  margin: 0 0 1.1rem 0;
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+li {
+  margin: 0 0 0.5rem 0;
+  font-size: 16px;
+  color: #1c1c28;
+}
+
+/* ===== 通用 span ===== */
+span {
+  letter-spacing: inherit;
+}
