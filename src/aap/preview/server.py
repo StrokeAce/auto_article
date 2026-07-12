@@ -277,7 +277,7 @@ class PreviewServer:
                 rel_path = f.name
             rows_html.append(
                 f'<tr>'
-                f'<td><a href="/view/{f.stem}">{self._escape_html(title)}</a></td>'
+                f'<td><a href="/view/{f.stem}" target="_blank">{self._escape_html(title)}</a></td>'
                 f'<td><code>{self._escape_html(template)}</code></td>'
                 f'<td style="color:#888">{self._escape_html(rel_path)}</td>'
                 f'<td style="color:#888">{mtime_str}</td>'

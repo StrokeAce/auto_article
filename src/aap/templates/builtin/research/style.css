@@ -35,7 +35,7 @@ h1 {
   font-size: 1.6rem;
   font-weight: 700;
   color: #1c1c28;
-  margin: 3.5rem 0 0.5rem 0;
+  margin: 1 0 0.5rem 0;
   padding-bottom: 0.8rem;
   border-bottom: 2px solid #e2ddd4;
   letter-spacing: -0.01em;
@@ -46,6 +46,7 @@ h1 {
 }
 
 /* H1前缀:CHAPTER 01 (金色等宽字体,小字号) */
+/* margin-top 控制章节间距(与上一节的距离),margin-bottom 控制CHAPTER编号与标题的间距 */
 h1::before {
   content: "CHAPTER " counter(chapter, decimal-leading-zero);
   display: block;
@@ -53,6 +54,7 @@ h1::before {
   font-size: 0.9rem;
   color: #a67c00;
   font-weight: 400;
+  margin-top: 1.5rem;
   margin-bottom: 0.3rem;
   letter-spacing: 0.1em;
 }
