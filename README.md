@@ -5,6 +5,7 @@
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-159%20passed-brightgreen.svg)](#测试)
+[![Templates](https://img.shields.io/badge/templates-3%20builtin-blue.svg)](#模板管理)
 
 ## 目录
 
@@ -32,8 +33,10 @@
 ### 核心能力
 
 - **Markdown 解析**：支持 Front Matter 元数据 + 标题/段落/列表/表格/图片/代码块/引用块
-- **模板系统**：配置文件 + 可视化编辑器双轨，CSS 与 YAML 配置分离
-- **HTML 渲染**：自动内联 CSS、过滤微信不支持的标签与属性、图片占位符替换
+- **模板系统**：配置文件 + 可视化编辑器双轨，CSS 与 YAML 配置分离；内置 3 套模板（minimal / caibao / research）
+- **HTML 渲染**：自动内联 CSS、过滤微信不支持的标签与属性、图片占位符替换、CSS 伪元素/伪类支持、H1-H6 转 `<p>` 标签规避微信字号覆盖
+- **章节标题装饰**：支持整图模式（每个章节一张标题图）和单图标模式（所有章节共用一张图标），可在 template.yaml 中配置
+- **目录模式预览**：预览服务支持扫描目录下所有 .md 文件，首页列出文章列表，点击在新标签页打开
 - **双路径发布**：
   - **API 自动发布（主）**：自动上传图片到素材库 + 调用草稿箱 API
   - **手动导出（备）**：导出 HTML + ZIP + 图片清单 + 操作指南
@@ -49,6 +52,9 @@
 - 图片并发上传（Semaphore=3）+ 指数退避重试（3 次）
 - 配置深度合并（全局 + 项目级）+ 类型自动转换
 - 模板三级优先级：项目模板 > 用户全局模板 > 内置模板
+- CSS 伪元素支持：Python 层模拟 `::before` / `::after` / `:nth-child(even)`，支持 `counter()` 自动编号（如 CHAPTER 01）
+- 章节标题自动装饰：整图模式按 H1 顺序匹配 1.png~N.png，单图标模式共用一张图标
+- H1-H6 标签转 `<p>`：规避微信编辑器对 h1-h6 内置 font-size 的强制覆盖
 
 ---
 
@@ -197,28 +203,62 @@ def hello():
 
 ## 本地预览
 
-发布前先本地预览渲染效果：
+发布前先本地预览渲染效果，支持**单文件模式**和**目录模式**两种启动方式：
+
+### 单文件模式
 
 ```powershell
-# 启动预览服务（默认端口 8000，自动打开浏览器）
+# 启动预览服务（默认端口 7788，自动打开浏览器）
 aap preview article.md
 
 # 指定端口与模式
 aap preview --port 8080 --mode wechat article.md
 
+# 指定模板（覆盖 Front Matter）
+aap preview --template caibao article.md
+
 # 不自动打开浏览器
 aap preview --no-browser article.md
+```
 
+### 目录模式
+
+扫描目录下所有 .md 文件（递归子目录），首页列出文章列表，点击文章标题在新标签页打开。
+
+```powershell
+# 预览整个 fixtures 目录
+aap preview tests/fixtures
+
+# 指定端口
+aap preview --port 8002 tests/fixtures
+
+# 预览某个模板的样本目录
+aap preview tests/fixtures/caibao
+```
+
+目录模式路由：
+- `GET /`：文章列表页（按修改时间倒序，显示标题/模板/路径/修改时间/大小）
+- `GET /view/<md_stem>`：在新标签页渲染指定 md 文件
+- `GET /view/<md_stem>/raw`：返回原始渲染 HTML（无外壳）
+- `GET /image/<path>`：本地图片访问
+- `GET /icon/<filename>`：模板章节图标
+- `WS /ws`：WebSocket 热重载（轮询当前 md 文件 mtime）
+
+### 预览模式
+
+- `wechat`（默认）：模拟微信编辑器外观（白底卡片，max-width: 640px）
+- `html`：纯 HTML 调试模式（max-width: 960px）
+- `screenshot`：截图模式（需安装可选依赖 `pip install -e ".[screenshot]"`）
+
+### 管理预览服务
+
+```powershell
 # 查看预览服务端口
 Get-NetTCPConnection -State Listen | Where-Object { (Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName -eq 'python' } | Select-Object LocalPort, OwningProcess
 
- # 停止预览服务
- Stop-Process -Id 7172
+# 停止预览服务
+Stop-Process -Id <PID>
 ```
-
-预览模式：
-- `wechat`（默认）：模拟微信编辑器外观
-- `html`：纯 HTML 调试模式
 
 支持 WebSocket 热重载，修改 Markdown 文件后页面自动刷新。
 
@@ -255,7 +295,17 @@ aap test compatibility article.md
 ```powershell
 aap template list
 # minimal
+# caibao
+# research
 ```
+
+### 内置模板
+
+| 模板名 | 用途 | 关键特征 |
+|--------|------|----------|
+| `minimal` | 极简风格 | 微信兼容，无章节装饰 |
+| `caibao` | 财报分析风格 | 复刻"财报破晓算法"公众号，蓝色加粗居中标题，15px 正文字号 |
+| `research` | 专业研究报告风格 | 深蓝色调，CHAPTER 编号章节（CSS counter），斑马纹表格，verdict 标签样式 |
 
 ### 2. 可视化编辑模板
 
@@ -276,19 +326,34 @@ aap template edit --no-browser minimal
 - **Ctrl+S**：刷新预览
 - **保存按钮**：写入 `~/.aap/templates/<name>/`
 
-### 3. 查看模板详情
-
-```powershell
-aap template show minimal
-```
-
 ### 模板优先级
 
 加载模板时按以下顺序查找，找到即用：
 
 1. **项目模板**：`./.aap/templates/<name>/`
 2. **用户全局模板**：`~/.aap/templates/<name>/`
-3. **内置模板**：随包分发（当前内置 `minimal`）
+3. **内置模板**：随包分发（当前内置 `minimal` / `caibao` / `research`）
+
+### 模板配置字段
+
+`template.yaml` 支持以下关键字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `name` | str | 模板名（与目录名一致） |
+| `description` | str | 模板描述 |
+| `typography` | object | 字体配置（font_family / base_size / base_color / line_height / heading_color 等） |
+| `spacing` | object | 间距配置（paragraph_margin / first_line_indent / left_right_padding / background_color） |
+| `image` | object | 图片样式（max_width / border_radius / shadow / caption_color） |
+| `table` | object | 表格样式（border_color / header_background / zebra_striped / zebra_color） |
+| `code_block` | object | 代码块样式（theme / background / font_size / line_numbers） |
+| `chapter_icon` | str | 章节标题装饰小图标文件名（单图标模式，所有章节共用） |
+| `chapter_title_images` | str | 章节标题整图目录名（整图模式，按 H1 顺序匹配 1.png~N.png） |
+
+**章节标题装饰模式**：
+- **整图模式**（`chapter_title_images` 非空）：每个 H1 按出现顺序使用对应编号的图片（第 N 个 H1 用第 N 张图），图片在上、标题文字在下
+- **单图标模式**（`chapter_icon` 非空且 `chapter_title_images` 为空）：所有 H1 共用同一张小图标，图标在标题文字左侧
+- **不装饰**（两者都为空）：H1 保持纯文本样式
 
 ---
 
@@ -304,9 +369,6 @@ aap publish article.md
 
 # 指定模板（覆盖 Front Matter）
 aap publish --template custom article.md
-
-# 不自动复制到剪贴板
-aap publish --no-clipboard article.md
 ```
 
 发布流程：
@@ -392,7 +454,7 @@ aap scf status --secret-id "AKIDxxx" --secret-key "xxx"
 ## 查看发布历史
 
 ```powershell
-# 列出最近 10 条发布记录（倒序，最新在前）
+# 列出最近 20 条发布记录（倒序，最新在前）
 aap history list
 
 # 查看更多
@@ -476,7 +538,6 @@ aap image bind ./out/article_xxx/manifest.json
 | `aap test compatibility <md>` | 兼容性检测 |
 | `aap template list` | 列出模板 |
 | `aap template edit [选项] <name>` | 编辑模板 |
-| `aap template show <name>` | 查看模板详情 |
 | `aap publish [选项] <md>` | 发布到草稿箱 |
 | `aap export [选项] <md>` | 导出 HTML 包 |
 | `aap image bind <manifest>` | 绑定图片 URL |
@@ -487,6 +548,7 @@ aap image bind ./out/article_xxx/manifest.json
 | `aap history show <n>` | 查看历史详情 |
 | `aap history path` | 显示历史文件路径 |
 | `aap history clear` | 清空历史 |
+| `aap preview <dir>` | 目录模式预览（扫描所有 md） |
 
 ---
 
@@ -521,7 +583,15 @@ auto_article/
 │   │   ├── manager.py             # 模板管理器
 │   │   ├── editor/                # 可视化编辑器
 │   │   │   └── server.py
-│   │   └── builtin/minimal/       # 内置模板
+│   │   └── builtin/               # 内置模板
+│   │       ├── minimal/           # 极简风格
+│   │       ├── caibao/            # 财报分析风格
+│   │       │   ├── chapter_titles/ # 章节标题图(1.png~8.png)
+│   │       │   ├── style.css
+│   │       │   └── template.yaml
+│   │       └── research/          # 研究报告风格
+│   │           ├── style.css
+│   │           └── template.yaml
 │   ├── preview/                   # 预览服务
 │   │   └── server.py
 │   ├── publish/                   # 发布模块
@@ -587,13 +657,18 @@ python -m pytest tests/ --cov=aap --cov-report=term-missing
 ```
 
 测试覆盖范围：
-- `core/`：parser、renderer、html_utils、template_engine
+- `core/`：parser、renderer、html_utils（含伪元素/伪类）、template_engine
 - `config/`：ConfigManager
 - `templates/`：TemplateManager、EditorServer
 - `wechat/`：DraftAPI
 - `scf/`：main_handler、SCFDeployer
 - `image/`：ImageBinder
-- `cli/`：history 命令
+- `cli/`：history 命令、main 入口
+
+测试 fixtures：
+- `tests/fixtures/minimal/`：sample.md + images/sample.png
+- `tests/fixtures/caibao/`：caibao_sample.md、changxin_tech_sample.md、zhongwu_gaoxin_sample.md
+- `tests/fixtures/research/`：物理卡口投资价值深度评估.md
 
 ---
 
