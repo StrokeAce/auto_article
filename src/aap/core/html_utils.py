@@ -180,6 +180,129 @@ def replace_image_src(html: str, mapping: dict[str, str]) -> str:
     return _serialize(soup, html)
 
 
+def convert_lists_to_paragraphs(html: str) -> str:
+    """将 <ul>/<ol>/<li> 列表转换为段落 + 项目符号
+
+    微信公众号编辑器对列表有特殊排版逻辑,容易在粗体等行内元素后
+    出现非预期的强制换行。将列表转换为普通段落后,文本流动完全
+    由自然换行决定,排版更可控。
+
+    转换规则:
+    - <ul> 的 <li> 前缀用 "• "
+    - <ol> 的 <li> 前缀用 "1. " "2. " 等编号
+    - 每个 <li> 转为一个或多个 <p> 段落(若 li 内含嵌套列表则拆成多段)
+    - 嵌套列表:内层缩进用两个全角空格模拟
+
+    Args:
+        html: 原 HTML
+
+    Returns:
+        转换后的 HTML
+    """
+    soup = BeautifulSoup(html, "lxml")
+
+    # 从最内层列表开始,逐层向外转换
+    while True:
+        # 找到所有最内层的列表(不含嵌套列表的)
+        innermost = []
+        for list_tag in soup.find_all(["ul", "ol"]):
+            if not list_tag.find(["ul", "ol"]):
+                innermost.append(list_tag)
+        if not innermost:
+            break
+
+        for list_tag in innermost:
+            _convert_simple_list(list_tag, soup)
+
+    return _serialize(soup, html)
+
+
+def _convert_simple_list(list_tag: Tag, soup: BeautifulSoup) -> None:
+    """转换一个不含嵌套列表的简单列表(所有 li 都只有行内内容)
+
+    将 <ul>/<ol> 替换为多个 <p> 段落。
+    """
+    is_ordered = list_tag.name == "ol"
+    li_items = list(list_tag.find_all("li", recursive=False))
+
+    # 计算深度:祖先中 ul/ol 的数量
+    depth = 0
+    p = list_tag.parent
+    while p:
+        if p.name in ("ul", "ol"):
+            depth += 1
+        p = p.parent
+
+    # 从 li 提取样式
+    p_style_parts = []
+    if li_items:
+        li_style = li_items[0].get("style", "") or ""
+        for part in li_style.split(";"):
+            part = part.strip()
+            if not part or ":" not in part:
+                continue
+            key = part.split(":")[0].strip().lower()
+            if key in ("font-size", "color", "line-height", "font-family"):
+                p_style_parts.append(part)
+    p_style_parts.append("margin: 0 0 0.5rem 0")
+    p_style = "; ".join(p_style_parts)
+
+    # 缩进前缀
+    indent_prefix = "\u3000" * depth
+
+    new_nodes = []
+    for idx, li in enumerate(li_items, start=1):
+        bullet = f"{idx}. " if is_ordered else "• "
+
+        # 分离行内内容和子块(如嵌套列表转换后的 p)
+        inline_parts = []
+        block_nodes = []
+        for child in li.children:
+            if isinstance(child, Tag) and child.name in ("p", "div", "section", "ul", "ol"):
+                block_nodes.append(child)
+            else:
+                inline_parts.append(child)
+
+        # 行内内容 → 带项目符号的段落
+        p_tag = soup.new_tag("p")
+        if p_style:
+            p_tag["style"] = p_style
+
+        has_content = False
+        # 前缀:缩进 + 项目符号
+        prefix = indent_prefix + bullet
+        p_tag.append(prefix)
+        has_content = True
+
+        for part in inline_parts:
+            if isinstance(part, NavigableString):
+                txt = str(part)
+                if txt.strip():
+                    p_tag.append(txt)
+                    has_content = True
+            else:
+                p_tag.append(part)
+                has_content = True
+
+        if has_content:
+            new_nodes.append(p_tag)
+
+        # 块级子节点(如嵌套列表转换后的段落)直接追加
+        for bn in block_nodes:
+            # 如果是段落,增加缩进(通过在前面加全角空格实现)
+            if bn.name == "p":
+                # 在段首加两个全角空格作为额外缩进
+                first_child = bn.contents[0] if bn.contents else None
+                if first_child and isinstance(first_child, NavigableString):
+                    first_child.replace_with("\u3000\u3000" + str(first_child))
+                else:
+                    # 第一个子节点不是文本,插入一个新的文本节点
+                    bn.insert(0, "\u3000\u3000")
+            new_nodes.append(bn)
+
+    list_tag.replace_with(*new_nodes)
+
+
 def wrap_section(html: str, style: Optional[str] = None) -> str:
     """将 HTML 用 <section> 包裹(微信编辑器推荐根标签)
 

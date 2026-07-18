@@ -22,6 +22,7 @@ from aap.core.html_utils import (
     inline_css,
     replace_image_src,
     wrap_section,
+    convert_lists_to_paragraphs,
 )
 from aap.core.models import Article, TemplateConfig
 
@@ -88,6 +89,15 @@ class HTMLRenderer:
         #     这些子标题本质就是正文,改用 <p> 标签可完全规避字号问题
         #     注意:H1 不转换(已被章节标题装饰逻辑处理)
         html = self._convert_subheadings_to_paragraphs(html)
+
+        # 5.6 将列表(ul/ol/li)转换为段落 + 项目符号
+        #     微信编辑器对列表有特殊排版逻辑,容易在行内元素(如 strong)后
+        #     出现非预期强制换行。转为普通段落后文本自然流动,排版更可控
+        html = convert_lists_to_paragraphs(html)
+
+        # 5.7 将紧跟在 </strong> 或 </b> 后的冒号移到标签内部
+        #     作为双重保险:即使某些场景仍有换行,冒号也跟粗体文字在同一行
+        html = self._move_colon_into_inline_bold(html)
 
         # 6. 用 section 包裹,注入根样式
         root_style = self._build_root_style(template)
@@ -158,6 +168,13 @@ class HTMLRenderer:
         re.IGNORECASE | re.DOTALL,
     )
 
+    # 匹配 </strong> 或 </b> 后紧跟的全角/半角冒号
+    # 用于将冒号移到标签内部,避免微信编辑器在 </strong> 后强制换行
+    # 例: <strong>电子级氢氟酸</strong>：氢氟酸... → <strong>电子级氢氟酸：</strong>氢氟酸...
+    _COLON_AFTER_BOLD_PATTERN = re.compile(
+        r'(</(?:strong|b)>)([：:])',
+    )
+
     def _convert_subheadings_to_paragraphs(self, html: str) -> str:
         """将 h1-h6 标题标签转换为 <p> 标签(保留内联样式)
 
@@ -175,6 +192,23 @@ class HTMLRenderer:
             return f'<p{attrs}>{content}</p>'
 
         return self._SUBHEADING_PATTERN.sub(_replace, html)
+
+    def _move_colon_into_inline_bold(self, html: str) -> str:
+        """将紧跟在 </strong> 或 </b> 后的冒号移到标签内部
+
+        微信编辑器在处理 <li><strong>xxx</strong>：yyy</li> 这种结构时,
+        会在 </strong> 后强制换行,导致冒号被挤到下一行,显示为:
+            xxx
+            ：yyy
+        将冒号移到 <strong> 内部,即使微信仍在 </strong> 后换行,
+        冒号也会跟粗体文字在同一行:
+            xxx：
+            yyy
+
+        例: <strong>电子级氢氟酸</strong>：氢氟酸...
+           → <strong>电子级氢氟酸：</strong>氢氟酸...
+        """
+        return self._COLON_AFTER_BOLD_PATTERN.sub(r'\2\1', html)
 
     def _replace_chapter_titles_with_images(
         self, html: str, image_urls: list[str], template: TemplateConfig
