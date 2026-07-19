@@ -1,3 +1,6 @@
+# 启动
+- aap preview --port 8002 tests/fixtures
+
 # AAP (Automated Article Publisher)
 
 > 微信公众号文章自动化发布工具 —— 将 Markdown 内容按可定制模板渲染为微信图文兼容 HTML，支持 API 自动上传草稿箱与手动拷贝导出双路径。
