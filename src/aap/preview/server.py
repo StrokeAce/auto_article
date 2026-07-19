@@ -192,24 +192,40 @@ class PreviewServer:
         async def websocket_endpoint(websocket: WebSocket) -> None:
             """WebSocket 热重载端点
 
-            轮询当前查看的 md 文件 mtime,变更则推送 reload。
+            轮询指定 md 文件 mtime,变更则推送 reload。
+            通过 query string 的 md 参数指定要监控的文件 stem,
+            避免多个预览页共享全局 _current_md 导致互相刷新。
             """
             await websocket.accept()
             clients.add(websocket)
-            last_mtime = self._last_mtime
+            # 从 query string 获取要监控的 md 文件 stem
+            md_stem = websocket.query_params.get("md", "")
+            watch_md: Optional[Path] = None
+            if md_stem:
+                watch_md = self._find_md_by_stem(md_stem)
+            # 单文件模式或未指定 md:回退到全局 _current_md
+            if watch_md is None and not self.is_dir_mode:
+                watch_md = self.md_path
+            if watch_md is None or not watch_md.exists():
+                await websocket.close()
+                clients.discard(websocket)
+                return
+            # 初始化为当前 mtime,避免连接时立即触发 reload
+            try:
+                last_mtime = watch_md.stat().st_mtime
+            except OSError:
+                last_mtime = self._last_mtime
             try:
                 while not self._stop_event.is_set():
                     await asyncio.sleep(1.0)
-                    cur_md = self._current_md
-                    if not cur_md or not cur_md.exists():
+                    if not watch_md or not watch_md.exists():
                         continue
                     try:
-                        mtime = cur_md.stat().st_mtime
+                        mtime = watch_md.stat().st_mtime
                     except OSError:
                         continue
                     if mtime != last_mtime:
                         last_mtime = mtime
-                        self._last_mtime = mtime
                         await websocket.send_json({"type": "reload"})
             except WebSocketDisconnect:
                 pass
@@ -436,7 +452,13 @@ body {{ {body_style} }}
 <script>
 (function() {{
   const status = document.getElementById('status');
-  const ws = new WebSocket((location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + location.host + '/ws');
+  // 从当前页面路径提取 md stem,传给 WebSocket 用于精准监控
+  // 路径形如 /view/<md_stem> 或 /view/<md_stem>/raw,或单文件模式 /
+  const pathMatch = location.pathname.match(/\\/view\\/([^/?#]+)/);
+  const mdStem = pathMatch ? pathMatch[1] : '';
+  const wsUrl = (location.protocol === 'https:' ? 'wss:' : 'ws:')
+    + '//' + location.host + '/ws' + (mdStem ? '?md=' + encodeURIComponent(mdStem) : '');
+  const ws = new WebSocket(wsUrl);
   ws.onopen = () => {{ status.textContent = '已连接,文件变更将自动刷新'; }};
   ws.onmessage = (ev) => {{
     try {{
